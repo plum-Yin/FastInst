@@ -7,6 +7,10 @@ def add_fastinst_config(cfg):
     Add config for FastInst.
     """
     # data config
+    # Roots for optional COCO-format underwater datasets. They are intentionally
+    # empty so installations do not depend on a machine-specific absolute path.
+    cfg.DATASETS.UIIS_ROOT = ""
+    cfg.DATASETS.USIS10K_ROOT = ""
     # select the dataset mapper
     cfg.INPUT.DATASET_MAPPER_NAME = "fastinst_instance"
     # Color augmentation

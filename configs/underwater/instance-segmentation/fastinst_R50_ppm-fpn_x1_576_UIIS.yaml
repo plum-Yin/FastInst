@@ -1,0 +1,4 @@
+_BASE_: ../../coco/instance-segmentation/fastinst_R50_ppm-fpn_x1_576.yaml
+DATASETS:
+  TRAIN: ("uiis_train",)
+  TEST: ("uiis_val",)

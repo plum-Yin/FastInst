@@ -56,6 +56,7 @@ from fastinst import (
     SemanticSegmentorWithTTA,
     add_fastinst_config,
 )
+from fastinst.data.datasets import register_uiis, register_usis10k
 
 
 class Trainer(DefaultTrainer):
@@ -281,10 +282,58 @@ def setup(args):
     add_fastinst_config(cfg)
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
+
+    configured_datasets = set(cfg.DATASETS.TRAIN) | set(cfg.DATASETS.TEST)
+    underwater_summaries = []
+    if configured_datasets & {"uiis_train", "uiis_val"}:
+        if not cfg.DATASETS.UIIS_ROOT:
+            raise ValueError(
+                "DATASETS.UIIS_ROOT must be set when using a UIIS dataset"
+            )
+        underwater_summaries.append(register_uiis(cfg.DATASETS.UIIS_ROOT))
+    if configured_datasets & {
+        "usis10k_train",
+        "usis10k_val",
+        "usis10k_test",
+    }:
+        if not cfg.DATASETS.USIS10K_ROOT:
+            raise ValueError(
+                "DATASETS.USIS10K_ROOT must be set when using a USIS10K dataset"
+            )
+        underwater_summaries.append(register_usis10k(cfg.DATASETS.USIS10K_ROOT))
+
+    if underwater_summaries:
+        category_counts = {
+            len(summary["categories"]) for summary in underwater_summaries
+        }
+        if len(category_counts) != 1:
+            raise ValueError(
+                "All configured underwater datasets must have the same number of categories"
+            )
+        cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES = category_counts.pop()
+
     cfg.freeze()
     default_setup(cfg, args)
     # Setup logger for "fastinst" module
-    setup_logger(output=cfg.OUTPUT_DIR, distributed_rank=comm.get_rank(), name="fastinst")
+    logger = setup_logger(
+        output=cfg.OUTPUT_DIR, distributed_rank=comm.get_rank(), name="fastinst"
+    )
+    if comm.is_main_process():
+        for summary in underwater_summaries:
+            logger.info(
+                "%s categories (%d): %s",
+                summary["family"].upper(),
+                len(summary["categories"]),
+                ", ".join(summary["categories"]),
+            )
+            for dataset_name, info in summary["splits"].items():
+                logger.info(
+                    "%s: %d images; JSON=%s; image_root=%s",
+                    dataset_name,
+                    info["num_images"],
+                    info["json_file"],
+                    info["image_root"],
+                )
     return cfg
 
 
