@@ -50,6 +50,7 @@ class FastInstDecoder(nn.Module):
 
         meta_pos_size = int(round(math.sqrt(self.num_queries)))
         self.meta_pos_embed = nn.Parameter(torch.empty(1, hidden_dim, meta_pos_size, meta_pos_size))
+        nn.init.normal_(self.meta_pos_embed, std=0.02)
         if num_aux_queries > 0:
             self.empty_query_features = nn.Embedding(num_aux_queries, hidden_dim)
             self.empty_query_pos_embed = nn.Embedding(num_aux_queries, hidden_dim)

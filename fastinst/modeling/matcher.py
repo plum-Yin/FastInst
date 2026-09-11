@@ -157,6 +157,28 @@ class HungarianMatcher(nn.Module):
                     + self.cost_dice * cost_dice
                     + self.cost_location * cost_location
             )
+            if not torch.isfinite(C).all():
+                invalid_tensors = {
+                    name: int((~torch.isfinite(value)).sum().item())
+                    for name, value in {
+                        "pred_logits": outputs["pred_logits"][b],
+                        "pred_masks": out_mask,
+                        "query_locations": out_query_loc,
+                        "target_masks": tgt_mask,
+                        "class_cost": cost_class,
+                        "mask_cost": cost_mask,
+                        "dice_cost": cost_dice,
+                        "location_cost": cost_location,
+                        "total_cost": C,
+                    }.items()
+                    if not torch.isfinite(value).all()
+                }
+                raise FloatingPointError(
+                    "Non-finite Hungarian matcher tensors at batch item {}: {}; "
+                    "target labels={}".format(
+                        b, invalid_tensors, tgt_ids.detach().cpu().tolist()
+                    )
+                )
             C = C.reshape(num_queries, -1).cpu()
             indices.append(linear_sum_assignment(C))
 
