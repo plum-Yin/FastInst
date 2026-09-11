@@ -2,9 +2,9 @@ _BASE_: ../../coco/instance-segmentation/fastinst_R50_ppm-fpn_x1_576.yaml
 DATASETS:
   TRAIN: ("usis10k_train",)
   TEST: ("usis10k_val",)
-INPUT:
-  MIN_SIZE_TEST: 800
-  MAX_SIZE_TEST: 1280
+# INPUT:
+#   MIN_SIZE_TEST: 800
+#   MAX_SIZE_TEST: 1280
 SOLVER:
   IMS_PER_BATCH: 8
   MAX_ITER: 47000
