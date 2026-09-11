@@ -2,3 +2,9 @@ _BASE_: ../../coco/instance-segmentation/fastinst_R50_ppm-fpn_x1_576.yaml
 DATASETS:
   TRAIN: ("uiis_train",)
   TEST: ("uiis_val",)
+SOLVER:
+  IMS_PER_BATCH: 8
+  MAX_ITER: 25000
+  STEPS: (22000, 24000)
+TEST:
+  EVAL_PERIOD: 1000
