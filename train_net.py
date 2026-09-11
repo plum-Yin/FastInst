@@ -29,6 +29,7 @@ from detectron2.engine import (
     DefaultTrainer,
     default_argument_parser,
     default_setup,
+    hooks,
     launch,
 )
 from detectron2.evaluation import (
@@ -57,6 +58,20 @@ from fastinst import (
     add_fastinst_config,
 )
 from fastinst.data.datasets import register_uiis, register_usis10k
+
+
+class StatefulBestCheckpointer(hooks.BestCheckpointer):
+    """Keep the best validation score when training is resumed."""
+
+    def state_dict(self):
+        return {
+            "best_metric": self.best_metric,
+            "best_iter": self.best_iter,
+        }
+
+    def load_state_dict(self, state_dict):
+        self.best_metric = state_dict["best_metric"]
+        self.best_iter = state_dict["best_iter"]
 
 
 class Trainer(DefaultTrainer):
@@ -165,6 +180,23 @@ class Trainer(DefaultTrainer):
         else:
             mapper = None
             return build_detection_train_loader(cfg, mapper=mapper)
+
+    def build_hooks(self):
+        trainer_hooks = super().build_hooks()
+        if self.cfg.TEST.EVAL_PERIOD > 0 and self.cfg.DATASETS.TEST:
+            # DefaultTrainer places EvalHook immediately before PeriodicWriter.
+            # Insert here so segm/AP from the current evaluation is available.
+            trainer_hooks.insert(
+                -1,
+                StatefulBestCheckpointer(
+                    self.cfg.TEST.EVAL_PERIOD,
+                    self.checkpointer,
+                    "segm/AP",
+                    mode="max",
+                    file_prefix="model_best",
+                ),
+            )
+        return trainer_hooks
 
     @classmethod
     def build_lr_scheduler(cls, cfg, optimizer):
